@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Message, Lead, FlowAction } from '../types';
 import {
   GREETING_MESSAGE, INITIAL_MESSAGE,
@@ -6,6 +6,7 @@ import {
 } from '../lib/flow';
 import { generateConciergeResponse } from '../services/openai';
 import { useLeadManager } from './useLeadManager';
+import { sendChatSummaryEmail } from '../services/email';
 
 interface UseChatProps {
   onLeadUpdate?: (lead: Lead) => void;
@@ -152,6 +153,29 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
   const triggerFlowStep = (input: string) => {
     executeFlowActions(processStep(currentStep, input, userLeadData));
   };
+
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const summarySentRef = useRef(false);
+
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    if (summarySentRef.current) return;
+
+    idleTimerRef.current = setTimeout(() => {
+      if (summarySentRef.current || messages.length <= 1) return;
+      summarySentRef.current = true;
+      sendChatSummaryEmail(userLeadData, messages);
+    }, 5 * 60 * 1000);
+  }, [userLeadData, messages]);
+
+  useEffect(() => {
+    if (messages.length > 1 && contactCollected) {
+      resetIdleTimer();
+    }
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [messages, contactCollected, resetIdleTimer]);
 
   return {
     messages,
