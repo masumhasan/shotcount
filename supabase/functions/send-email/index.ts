@@ -14,20 +14,65 @@ const transport = nodemailer.createTransport({
   },
 });
 
-function buildSummaryHtml(body: Record<string, any>): string {
+async function summarizeConversation(
+  messages: Array<{ sender: string; text: string }>,
+  leadName: string,
+): Promise<string> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey || !messages?.length) {
+    return "No conversation to summarize.";
+  }
+
+  const transcript = messages
+    .map((m) => {
+      const label = m.sender === "user" ? (leadName || "Client") : m.sender === "bot" ? "Bot" : "Admin";
+      return `${label}: ${m.text}`;
+    })
+    .join("\n");
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      temperature: 0.4,
+      messages: [
+        {
+          role: "system",
+          content: `You are a business assistant for Shotcount Wallpaper Hangers. Summarize the following chat conversation into a concise, professional email briefing for the business owner. Include:
+1. A one-line overview of what the client wants.
+2. Key details gathered (project type, scope, timeline, budget if mentioned).
+3. Client's interest level and urgency (hot lead, warm, exploratory).
+4. Any specific requests, concerns, or follow-up actions needed.
+5. Recommended next steps.
+
+Keep it brief, scannable, and action-oriented. Use short paragraphs and bullet points. Do not use em dashes or en dashes.`,
+        },
+        {
+          role: "user",
+          content: `Chat transcript:\n\n${transcript}`,
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    console.error("OpenAI API error:", await res.text());
+    return "Could not generate summary. Please review the conversation in the inbox.";
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || "Summary unavailable.";
+}
+
+function buildSummaryHtml(body: Record<string, any>, aiSummary: string): string {
   const {
     leadName, leadPhone, leadEmail, leadType,
-    projectType, serviceType, timeline, budget, messages, tags,
+    projectType, serviceType, timeline, budget, tags,
   } = body;
-
-  const msgRows = (messages || [])
-    .map((m: any) => {
-      const label = m.sender === "user"
-        ? (leadName || "Client")
-        : m.sender === "bot" ? "Bot" : "Admin";
-      return `<tr><td style="padding:6px 12px;color:#64748b;font-size:12px;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:6px 12px;font-size:13px">${m.text}</td></tr>`;
-    })
-    .join("");
 
   const tagBadges = (tags || [])
     .map((t: string) =>
@@ -35,10 +80,15 @@ function buildSummaryHtml(body: Record<string, any>): string {
     )
     .join("");
 
+  const summaryHtml = aiSummary
+    .replace(/\n/g, "<br>")
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/- /g, "&bull; ");
+
   return `
     <div style="font-family:'Inter',system-ui,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">
       <div style="background:#7eb1b8;padding:24px;color:white">
-        <h2 style="margin:0;font-size:18px">New Chat Summary</h2>
+        <h2 style="margin:0;font-size:18px">New Lead Summary</h2>
         <p style="margin:4px 0 0;font-size:13px;opacity:0.85">Shotcount Wallpaper Hangers</p>
       </div>
       <div style="padding:24px">
@@ -54,10 +104,10 @@ function buildSummaryHtml(body: Record<string, any>): string {
           <tr><td style="padding:4px 0;color:#64748b;font-size:13px">Budget</td><td style="padding:4px 0;font-size:13px;font-weight:600">${budget || "N/A"}</td></tr>
         </table>
         ${tagBadges ? `<div style="margin-bottom:20px">${tagBadges}</div>` : ""}
-        <h3 style="margin:0 0 12px;font-size:15px;color:#334155">Conversation</h3>
-        <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden">
-          ${msgRows || '<tr><td style="padding:12px;color:#94a3b8;font-size:13px">No messages</td></tr>'}
-        </table>
+        <h3 style="margin:0 0 12px;font-size:15px;color:#334155">Conversation Summary</h3>
+        <div style="background:#f8fafc;border-radius:8px;padding:16px;font-size:13px;line-height:1.7;color:#334155">
+          ${summaryHtml}
+        </div>
       </div>
       <div style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center">
         <p style="margin:0;font-size:11px;color:#94a3b8">Sent automatically by Shotcount Concierge</p>
@@ -99,7 +149,13 @@ Deno.serve(async (req) => {
 
     if (action === "chat-summary") {
       const ownerEmail = Deno.env.get("EMAIL_OWNER") || Deno.env.get("EMAIL_USER")!;
-      const html = buildSummaryHtml(body);
+
+      const aiSummary = await summarizeConversation(
+        body.messages || [],
+        body.leadName || "Client",
+      );
+
+      const html = buildSummaryHtml(body, aiSummary);
 
       await transport.sendMail({
         from: `"Shotcount Concierge" <${Deno.env.get("EMAIL_USER")}>`,
