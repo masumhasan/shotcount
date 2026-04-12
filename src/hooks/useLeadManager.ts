@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Lead, Message } from '../types';
 import { getLeadTags } from '../lib/lead-classifier';
+import { createLead, updateLead } from '../services/leads';
+import { addMessage } from '../services/messages';
 
 interface UseLeadManagerProps {
   messages: Message[];
@@ -10,42 +12,58 @@ interface UseLeadManagerProps {
 
 export function useLeadManager({ messages, currentStep, onLeadUpdate }: UseLeadManagerProps) {
   const [userLeadData, setUserLeadData] = useState<Partial<Lead>>({});
-  const [activeLeadId] = useState(() => Math.random().toString(36).substr(2, 9));
+  const [activeLeadId, setActiveLeadId] = useState<string | null>(null);
+  const leadCreating = useRef(false);
+  const lastSyncedMsgCount = useRef(0);
 
-  const updateLeadData = (update: Partial<Lead>) => {
+  const updateLeadData = useCallback((update: Partial<Lead>) => {
     setUserLeadData(prev => ({ ...prev, ...update }));
-  };
+  }, []);
 
   useEffect(() => {
-    if (!onLeadUpdate) return;
+    if (leadCreating.current || activeLeadId) return;
+    leadCreating.current = true;
 
-    const lead: Lead = {
+    createLead({ status: 'New' })
+      .then(lead => setActiveLeadId(lead.id))
+      .catch(err => console.error('Failed to create lead:', err))
+      .finally(() => { leadCreating.current = false; });
+  }, [activeLeadId]);
+
+  useEffect(() => {
+    if (!activeLeadId) return;
+
+    const tags = getLeadTags(userLeadData);
+    const status: Lead['status'] = currentStep >= 7 ? 'Booked' : currentStep >= 1 ? 'In Progress' : 'New';
+
+    updateLead(activeLeadId, {
+      ...userLeadData,
+      tags,
+      status,
+    }).catch(err => console.error('Failed to update lead:', err));
+
+    onLeadUpdate?.({
       id: activeLeadId,
-      name: userLeadData.name,
-      phone: userLeadData.phone,
-      email: userLeadData.email,
       type: userLeadData.type || 'Homeowner',
-      serviceType: userLeadData.serviceType,
-      projectType: userLeadData.projectType,
-      timeline: userLeadData.timeline,
-      budget: userLeadData.budget,
-      timestamp: 'Just now',
-      tags: getLeadTags(userLeadData),
-      status: currentStep >= 7 ? 'Booked' : 'In Progress',
-      messages,
-    };
+      timestamp: '',
+      tags,
+      status,
+      ...userLeadData,
+    } as Lead);
+  }, [userLeadData, currentStep, activeLeadId]);
 
-    onLeadUpdate(lead);
+  useEffect(() => {
+    if (!activeLeadId || messages.length <= lastSyncedMsgCount.current) return;
 
-    const savedLeads = JSON.parse(localStorage.getItem('shotcount_leads') || '[]');
-    const idx = savedLeads.findIndex((l: Lead) => l.id === activeLeadId);
-    if (idx > -1) {
-      savedLeads[idx] = lead;
-    } else {
-      savedLeads.unshift(lead);
+    const newMessages = messages.slice(lastSyncedMsgCount.current);
+    lastSyncedMsgCount.current = messages.length;
+
+    for (const msg of newMessages) {
+      addMessage(activeLeadId, msg).catch(err =>
+        console.error('Failed to save message:', err),
+      );
     }
-    localStorage.setItem('shotcount_leads', JSON.stringify(savedLeads));
-  }, [messages, userLeadData, currentStep, activeLeadId, onLeadUpdate]);
+  }, [messages, activeLeadId]);
 
   return { userLeadData, activeLeadId, updateLeadData };
 }

@@ -17,6 +17,7 @@ export interface Lead {
   budget?: Budget;
   photoUrl?: string;
   timestamp: string;
+  createdAt?: string;
   tags: string[];
   status: 'New' | 'Contacted' | 'Booked' | 'In Progress';
   messages?: Message[];

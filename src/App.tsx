@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquare,
   Inbox,
@@ -8,6 +8,8 @@ import {
   Settings,
   User,
   MoreHorizontal,
+  Trash2,
+  LogOut,
   X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -15,33 +17,18 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { cn } from './lib/utils';
-import { Lead, Message } from './types';
+import type { Lead, Message } from './types';
 import { ChatInterface } from './components/ChatInterface';
-
-const INITIAL_LEADS: Lead[] = [
-  {
-    id: '1',
-    type: 'Designer',
-    projectType: 'Entire residence',
-    serviceType: 'Installation',
-    timeline: '1-3 months',
-    budget: '$3000+',
-    timestamp: '2 hours ago',
-    tags: ['High Intent', 'Designer Lead', 'Premium Client'],
-    status: 'New',
-  },
-  {
-    id: '2',
-    type: 'Homeowner',
-    projectType: 'Single room',
-    serviceType: 'Removal & Prep',
-    timeline: 'Within 1 month',
-    budget: '$1000-$3000',
-    timestamp: '5 hours ago',
-    tags: ['Premium Client'],
-    status: 'Contacted',
-  },
-];
+import { ProtectedRoute } from './components/ProtectedRoute';
+import AuthPage from './pages/AuthPage';
+import { useAuth } from './hooks/useAuth';
+import { supabase } from './lib/supabase';
+import {
+  fetchLeads as fetchLeadsFromDb,
+  deleteLead as deleteLeadFromDb,
+  fetchLeadWithMessages,
+} from './services/leads';
+import { addMessage as addMessageToDb } from './services/messages';
 
 const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: React.ElementType; label: string; active?: boolean; onClick: () => void }) => (
   <button
@@ -60,8 +47,16 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/chat" element={<PublicChatPage />} />
-        <Route path="/*" element={<AdminLayout />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route
+          path="/inbox"
+          element={
+            <ProtectedRoute>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<PublicChatPage />} />
       </Routes>
     </Router>
   );
@@ -77,21 +72,43 @@ function PublicChatPage() {
 
 function AdminLayout() {
   const navigate = useNavigate();
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    const saved = localStorage.getItem('shotcount_leads');
-    return saved ? JSON.parse(saved) : INITIAL_LEADS;
-  });
+  const { signOut } = useAuth();
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [adminReplyValue, setAdminReplyValue] = useState('');
+  const [loadingLeads, setLoadingLeads] = useState(true);
   const modalChatEndRef = useRef<HTMLDivElement>(null);
 
+  const loadLeads = useCallback(async () => {
+    try {
+      const data = await fetchLeadsFromDb();
+      setLeads(data);
+    } catch (err) {
+      console.error('Failed to fetch leads:', err);
+    } finally {
+      setLoadingLeads(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const syncLeads = () => {
-      const saved = localStorage.getItem('shotcount_leads');
-      if (saved) setLeads(JSON.parse(saved));
-    };
-    window.addEventListener('focus', syncLeads);
-    return () => window.removeEventListener('focus', syncLeads);
+    loadLeads();
+
+    const channel = supabase
+      .channel('leads-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+        loadLeads();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+        loadLeads();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [loadLeads]);
+
+  const handleSelectLead = useCallback(async (lead: Lead) => {
+    const full = await fetchLeadWithMessages(lead.id);
+    if (full) setSelectedLead(full);
   }, []);
 
   useEffect(() => {
@@ -100,24 +117,63 @@ function AdminLayout() {
     }
   }, [selectedLead?.messages]);
 
-  const handleAdminReply = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!selectedLead) return;
+
+    const channel = supabase
+      .channel(`lead-msgs-${selectedLead.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `lead_id=eq.${selectedLead.id}`,
+      }, async () => {
+        const fresh = await fetchLeadWithMessages(selectedLead.id);
+        if (fresh) setSelectedLead(fresh);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedLead?.id]);
+
+  const handleAdminReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminReplyValue.trim() || !selectedLead) return;
 
     const adminMsg: Message = { id: Date.now().toString(), text: adminReplyValue, sender: 'admin' };
-    const updatedMessages = [...(selectedLead.messages || []), adminMsg];
-    const updatedLead = { ...selectedLead, messages: updatedMessages, status: 'Contacted' as const };
-    setSelectedLead(updatedLead);
 
-    const updatedLeads = leads.map(lead => (lead.id === selectedLead.id ? updatedLead : lead));
-    setLeads(updatedLeads);
-    localStorage.setItem('shotcount_leads', JSON.stringify(updatedLeads));
+    setSelectedLead(prev => prev ? {
+      ...prev,
+      messages: [...(prev.messages || []), adminMsg],
+      status: 'Contacted',
+    } : null);
     setAdminReplyValue('');
+
+    try {
+      await addMessageToDb(selectedLead.id, adminMsg);
+      await loadLeads();
+    } catch (err) {
+      console.error('Failed to send admin reply:', err);
+    }
+  };
+
+  const handleDeleteLead = async (leadId: string) => {
+    try {
+      await deleteLeadFromDb(leadId);
+      setLeads(prev => prev.filter(l => l.id !== leadId));
+      setSelectedLead(null);
+    } catch (err) {
+      console.error('Failed to delete lead:', err);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   return (
     <div className="min-h-screen bg-surface flex font-sans selection:bg-primary selection:text-white">
-      {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-border flex flex-col p-6 fixed h-full">
         <div className="flex items-center gap-3 mb-10 px-2">
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
@@ -128,15 +184,15 @@ function AdminLayout() {
 
         <nav className="flex-1 space-y-2">
           <SidebarItem icon={Inbox} label="Inbox" active onClick={() => {}} />
-          <SidebarItem icon={MessageSquare} label="Public Chat" onClick={() => navigate('/chat')} />
+          <SidebarItem icon={MessageSquare} label="Public Chat" onClick={() => navigate('/')} />
         </nav>
 
-        <div className="pt-6 border-t border-border">
+        <div className="pt-6 border-t border-border space-y-2">
           <SidebarItem icon={Settings} label="Settings" onClick={() => {}} />
+          <SidebarItem icon={LogOut} label="Sign Out" onClick={handleSignOut} />
         </div>
       </aside>
 
-      {/* Main Content — Inbox */}
       <main className="flex-1 ml-64 p-10">
         <div className="space-y-6 animate-in fade-in duration-500">
           <div className="flex justify-between items-center">
@@ -165,69 +221,84 @@ function AdminLayout() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {leads.map((lead) => (
-                  <tr
-                    key={lead.id}
-                    onClick={() => setSelectedLead(lead)}
-                    className="hover:bg-surface/50 transition-colors group cursor-pointer"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center">
-                          <User className="w-4 h-4 text-text-muted" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-text-main">{lead.name || lead.type}</p>
-                          <p className="text-xs text-text-muted">{lead.timestamp}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-text-main font-medium">{lead.phone || '—'}</p>
-                      <p className="text-xs text-text-muted">{lead.email || '—'}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-text-main font-medium">{lead.projectType || 'N/A'}</p>
-                      <p className="text-xs text-text-muted">{lead.serviceType || 'N/A'}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-text-main">{lead.budget || 'N/A'}</p>
-                      <p className="text-xs text-text-muted">{lead.timeline || 'N/A'}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {lead.tags.map(tag => (
-                          <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-surface text-text-main/80 font-bold">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        'text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider',
-                        lead.status === 'New' ? 'bg-primary/10 text-primary'
-                          : lead.status === 'Booked' ? 'bg-secondary/20 text-secondary'
-                          : lead.status === 'In Progress' ? 'bg-amber-50 text-amber-600'
-                          : 'bg-surface text-text-muted',
-                      )}>
-                        {lead.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="p-2 text-text-muted/60 hover:text-text-main opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontal className="w-5 h-5" />
-                      </button>
+                {loadingLeads ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-16 text-center">
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-sm text-text-muted">Loading leads...</p>
                     </td>
                   </tr>
-                ))}
+                ) : leads.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-16 text-center">
+                      <Inbox className="w-10 h-10 text-text-muted/30 mx-auto mb-3" />
+                      <p className="text-sm text-text-muted">No leads yet. New conversations from the public chat will appear here.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  leads.map((lead) => (
+                    <tr
+                      key={lead.id}
+                      onClick={() => handleSelectLead(lead)}
+                      className="hover:bg-surface/50 transition-colors group cursor-pointer"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center">
+                            <User className="w-4 h-4 text-text-muted" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-text-main">{lead.name || lead.type}</p>
+                            <p className="text-xs text-text-muted">{lead.timestamp}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-text-main font-medium">{lead.phone || '-'}</p>
+                        <p className="text-xs text-text-muted">{lead.email || '-'}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-text-main font-medium">{lead.projectType || 'N/A'}</p>
+                        <p className="text-xs text-text-muted">{lead.serviceType || 'N/A'}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-bold text-text-main">{lead.budget || 'N/A'}</p>
+                        <p className="text-xs text-text-muted">{lead.timeline || 'N/A'}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {lead.tags.map(tag => (
+                            <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-surface text-text-main/80 font-bold">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={cn(
+                          'text-[10px] px-2 py-1 rounded-lg font-bold uppercase tracking-wider',
+                          lead.status === 'New' ? 'bg-primary/10 text-primary'
+                            : lead.status === 'Booked' ? 'bg-secondary/20 text-secondary'
+                            : lead.status === 'In Progress' ? 'bg-amber-50 text-amber-600'
+                            : 'bg-surface text-text-muted',
+                        )}>
+                          {lead.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="p-2 text-text-muted/60 hover:text-text-main opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreHorizontal className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </main>
 
-      {/* Conversation Modal */}
       <AnimatePresence>
         {selectedLead && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -254,19 +325,28 @@ function AdminLayout() {
                     <p className="text-sm text-text-muted">{selectedLead.timestamp} &middot; {selectedLead.status}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedLead(null)} className="p-2 hover:bg-border rounded-full transition-colors">
-                  <X className="w-6 h-6 text-text-muted" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleDeleteLead(selectedLead.id)}
+                    className="p-2 hover:bg-red-50 text-text-muted hover:text-red-500 rounded-full transition-colors"
+                    title="Delete lead"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => setSelectedLead(null)} className="p-2 hover:bg-border rounded-full transition-colors">
+                    <X className="w-6 h-6 text-text-muted" />
+                  </button>
+                </div>
               </div>
 
               <div className="p-6 bg-surface border-b border-border grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-[10px] font-bold text-text-muted/80 uppercase tracking-widest mb-1">Phone</p>
-                  <p className="text-sm font-bold text-text-main">{selectedLead.phone || '—'}</p>
+                  <p className="text-sm font-bold text-text-main">{selectedLead.phone || '-'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-text-muted/80 uppercase tracking-widest mb-1">Email</p>
-                  <p className="text-sm font-bold text-text-main">{selectedLead.email || '—'}</p>
+                  <p className="text-sm font-bold text-text-main">{selectedLead.email || '-'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-text-muted/80 uppercase tracking-widest mb-1">Type</p>
