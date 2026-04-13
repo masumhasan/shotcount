@@ -4,7 +4,6 @@ import {
   Inbox,
   Search,
   Send,
-  Settings,
   User,
   MoreHorizontal,
   Trash2,
@@ -185,7 +184,6 @@ function AdminLayout() {
         </nav>
 
         <div className="pt-6 border-t border-border space-y-2">
-          <SidebarItem icon={Settings} label="Settings" onClick={() => {}} />
           <SidebarItem icon={LogOut} label="Sign Out" onClick={handleSignOut} />
         </div>
       </aside>
