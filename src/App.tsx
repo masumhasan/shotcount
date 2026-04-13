@@ -5,7 +5,6 @@ import {
   Search,
   Send,
   User,
-  MoreHorizontal,
   Trash2,
   LogOut,
   X,
@@ -281,8 +280,12 @@ function AdminLayout() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="p-2 text-text-muted/60 hover:text-text-main opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MoreHorizontal className="w-5 h-5" />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
+                          className="p-2 text-text-muted/60 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                          title="Delete lead"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
