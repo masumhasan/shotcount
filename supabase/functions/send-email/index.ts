@@ -49,7 +49,9 @@ async function summarizeConversation(
 4. Any specific requests, concerns, or follow-up actions needed.
 5. Recommended next steps.
 
-Keep it brief, scannable, and action-oriented. Use short paragraphs and bullet points. Do not use em dashes or en dashes.`,
+Keep it brief, scannable, and action-oriented. Use short paragraphs and bullet points. Do not use em dashes or en dashes.
+
+IMPORTANT: Do NOT include any sign-off, closing, or signature like "Best regards" or "[Your Name]". The email template already has a footer. End with your last actionable point and nothing else.`,
         },
         {
           role: "user",
@@ -109,8 +111,11 @@ function buildSummaryHtml(body: Record<string, any>, aiSummary: string): string 
           ${summaryHtml}
         </div>
       </div>
-      <div style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center">
-        <p style="margin:0;font-size:11px;color:#94a3b8">Sent automatically by Shotcount Concierge</p>
+      <div style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e2e8f0">
+        <p style="margin:0 0 4px;font-size:13px;color:#64748b">Best regards,</p>
+        <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#334155">ShotCount Assistant</p>
+        <p style="margin:0 0 4px;font-size:12px;color:#64748b">Shotcount Wallpaper Hangers</p>
+        <a href="https://www.shotcount.com" style="font-size:12px;color:#7eb1b8;text-decoration:none">www.shotcount.com</a>
       </div>
     </div>
   `;
