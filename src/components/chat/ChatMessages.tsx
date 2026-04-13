@@ -142,7 +142,7 @@ const ContactForm: React.FC<{ onSubmit: (name: string, phone: string, email: str
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Your name *"
+        placeholder="Your First Name *"
         className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
         required
       />
