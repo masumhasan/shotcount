@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Layers, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function AuthPage() {
@@ -38,9 +38,7 @@ export default function AuthPage() {
     <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-            <Layers className="text-white w-7 h-7" />
-          </div>
+          <img src="/Shotcount-Logo.png" alt="Shotcount" className="w-12 h-12 rounded-xl object-contain" />
           <span className="text-2xl font-bold tracking-tight text-text-main">
             Shotcount
           </span>

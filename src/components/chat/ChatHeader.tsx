@@ -9,12 +9,12 @@ interface ChatHeaderProps {
 export const ChatHeader: React.FC<ChatHeaderProps> = ({ onClose }) => (
   <div className="bg-primary p-6 text-white flex justify-between items-center">
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+      <div className="relative w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
         <DotLottieReact
           src="/bot.lottie"
           autoplay
           loop
-          className="w-10 h-10"
+          className="w-16 h-16 absolute -top-3 -left-3"
         />
       </div>
       <div>

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquare,
   Inbox,
-  Layers,
   Search,
   Send,
   Settings,
@@ -176,9 +175,7 @@ function AdminLayout() {
     <div className="min-h-screen bg-surface flex font-sans selection:bg-primary selection:text-white">
       <aside className="w-64 bg-white border-r border-border flex flex-col p-6 fixed h-full">
         <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-            <Layers className="text-white w-6 h-6" />
-          </div>
+          <img src="/Shotcount-Logo.png" alt="Shotcount" className="w-10 h-10 rounded-xl object-contain" />
           <span className="text-xl font-bold tracking-tight text-text-main">Shotcount</span>
         </div>
 
