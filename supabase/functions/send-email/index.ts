@@ -44,7 +44,7 @@ async function summarizeConversation(
           role: "system",
           content: `You are a business assistant for Shotcount Wallpaper Hangers. Summarize the following chat conversation into a concise, professional email briefing for the business owner. Include:
 1. A one-line overview of what the client wants.
-2. Key details gathered (project type, scope, timeline, budget if mentioned).
+2. Key details gathered (room types, scope, timeline, budget if mentioned).
 3. Client's interest level and urgency (hot lead, warm, exploratory).
 4. Any specific requests, concerns, or follow-up actions needed.
 5. Recommended next steps.
@@ -73,12 +73,16 @@ IMPORTANT: Do NOT include any sign-off, closing, or signature like "Best regards
 function buildSummaryHtml(body: Record<string, any>, aiSummary: string): string {
   const {
     leadName, leadPhone, leadEmail, leadType,
-    projectType, serviceType, timeline, budget, tags,
+    roomTypes, projectType, timeline, budget, hasWallpaper, tags,
   } = body;
+
+  const roomDisplay = Array.isArray(roomTypes) && roomTypes.length > 0
+    ? roomTypes.join(", ")
+    : projectType || "N/A";
 
   const tagBadges = (tags || [])
     .map((t: string) =>
-      `<span style="display:inline-block;background:#f1f5f9;color:#334155;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin-right:4px">${t}</span>`
+      `<span style="display:inline-block;background:#1C1C1C;color:#C6A86B;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-right:4px;margin-bottom:4px">${t}</span>`
     )
     .join("");
 
@@ -89,33 +93,33 @@ function buildSummaryHtml(body: Record<string, any>, aiSummary: string): string 
 
   return `
     <div style="font-family:'Inter',system-ui,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">
-      <div style="background:#7eb1b8;padding:24px;color:white">
-        <h2 style="margin:0;font-size:18px">New Lead Summary</h2>
-        <p style="margin:4px 0 0;font-size:13px;opacity:0.85">Shotcount Wallpaper Hangers</p>
+      <div style="background:#0F1A2B;padding:24px;color:#F5F5F5">
+        <h2 style="margin:0;font-size:18px;color:#C6A86B">New Lead Summary</h2>
+        <p style="margin:4px 0 0;font-size:13px;color:#A89F91">Shotcount Wallpaper Hangers</p>
       </div>
       <div style="padding:24px">
-        <h3 style="margin:0 0 16px;font-size:15px;color:#334155">Client Details</h3>
+        <h3 style="margin:0 0 16px;font-size:15px;color:#0F1A2B">Client Details</h3>
         <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-          <tr><td style="padding:4px 0;color:#64748b;font-size:13px;width:120px">Name</td><td style="padding:4px 0;font-size:13px;font-weight:600">${leadName || "Not provided"}</td></tr>
-          <tr><td style="padding:4px 0;color:#64748b;font-size:13px">Phone</td><td style="padding:4px 0;font-size:13px;font-weight:600">${leadPhone || "Not provided"}</td></tr>
-          <tr><td style="padding:4px 0;color:#64748b;font-size:13px">Email</td><td style="padding:4px 0;font-size:13px;font-weight:600">${leadEmail || "Not provided"}</td></tr>
-          <tr><td style="padding:4px 0;color:#64748b;font-size:13px">Type</td><td style="padding:4px 0;font-size:13px;font-weight:600">${leadType || "N/A"}</td></tr>
-          <tr><td style="padding:4px 0;color:#64748b;font-size:13px">Project</td><td style="padding:4px 0;font-size:13px;font-weight:600">${projectType || "N/A"}</td></tr>
-          <tr><td style="padding:4px 0;color:#64748b;font-size:13px">Service</td><td style="padding:4px 0;font-size:13px;font-weight:600">${serviceType || "N/A"}</td></tr>
-          <tr><td style="padding:4px 0;color:#64748b;font-size:13px">Timeline</td><td style="padding:4px 0;font-size:13px;font-weight:600">${timeline || "N/A"}</td></tr>
-          <tr><td style="padding:4px 0;color:#64748b;font-size:13px">Budget</td><td style="padding:4px 0;font-size:13px;font-weight:600">${budget || "N/A"}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:8px 0;color:#64748b;font-size:13px;width:130px">Name</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#1e293b">${leadName || "Not provided"}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:8px 0;color:#64748b;font-size:13px">Phone</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#1e293b">${leadPhone || "Not provided"}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:8px 0;color:#64748b;font-size:13px">Email</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#1e293b">${leadEmail || "Not provided"}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:8px 0;color:#64748b;font-size:13px">Client Type</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#1e293b">${leadType || "N/A"}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:8px 0;color:#64748b;font-size:13px">Rooms/Spaces</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#1e293b">${roomDisplay}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:8px 0;color:#64748b;font-size:13px">Timeline</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#1e293b">${timeline || "N/A"}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:8px 0;color:#64748b;font-size:13px">Budget</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#1e293b">${budget || "N/A"}</td></tr>
+          <tr><td style="padding:8px 0;color:#64748b;font-size:13px">Has Wallpaper</td><td style="padding:8px 0;font-size:13px;font-weight:600;color:#1e293b">${hasWallpaper || "Not asked"}</td></tr>
         </table>
         ${tagBadges ? `<div style="margin-bottom:20px">${tagBadges}</div>` : ""}
-        <h3 style="margin:0 0 12px;font-size:15px;color:#334155">Conversation Summary</h3>
+        <h3 style="margin:0 0 12px;font-size:15px;color:#0F1A2B">Conversation Summary</h3>
         <div style="background:#f8fafc;border-radius:8px;padding:16px;font-size:13px;line-height:1.7;color:#334155">
           ${summaryHtml}
         </div>
       </div>
-      <div style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e2e8f0">
-        <p style="margin:0 0 4px;font-size:13px;color:#64748b">Best regards,</p>
-        <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#334155">ShotCount Assistant</p>
-        <p style="margin:0 0 4px;font-size:12px;color:#64748b">Shotcount Wallpaper Hangers</p>
-        <a href="https://www.shotcount.com" style="font-size:12px;color:#7eb1b8;text-decoration:none">www.shotcount.com</a>
+      <div style="padding:20px 24px;background:#0F1A2B;border-top:1px solid #1C1C1C">
+        <p style="margin:0 0 4px;font-size:13px;color:#A89F91">Best regards,</p>
+        <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#F5F5F5">ShotCount Assistant</p>
+        <p style="margin:0 0 4px;font-size:12px;color:#A89F91">Shotcount Wallpaper Hangers</p>
+        <a href="https://www.shotcount.com" style="font-size:12px;color:#C6A86B;text-decoration:none">www.shotcount.com</a>
       </div>
     </div>
   `;

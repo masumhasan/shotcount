@@ -153,17 +153,21 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
 
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const summarySentRef = useRef(false);
+  const latestLeadRef = useRef(userLeadData);
+  const latestMessagesRef = useRef(messages);
+  latestLeadRef.current = userLeadData;
+  latestMessagesRef.current = messages;
 
   const resetIdleTimer = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     if (summarySentRef.current) return;
 
     idleTimerRef.current = setTimeout(() => {
-      if (summarySentRef.current || messages.length <= 1) return;
+      if (summarySentRef.current || latestMessagesRef.current.length <= 1) return;
       summarySentRef.current = true;
-      sendChatSummaryEmail(userLeadData, messages);
+      sendChatSummaryEmail(latestLeadRef.current, latestMessagesRef.current);
     }, 5 * 60 * 1000);
-  }, [userLeadData, messages]);
+  }, []);
 
   useEffect(() => {
     if (messages.length > 1) {

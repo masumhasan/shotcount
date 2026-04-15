@@ -9,15 +9,16 @@ export async function sendChatSummaryEmail(
     const { error } = await supabase.functions.invoke('send-email', {
       body: {
         action: 'chat-summary',
-        leadName: leadData.name,
-        leadPhone: leadData.phone,
-        leadEmail: leadData.email,
-        leadType: leadData.type,
-        projectType: leadData.projectType,
-        serviceType: leadData.serviceType,
-        timeline: leadData.timeline,
-        budget: leadData.budget,
-        tags: leadData.tags,
+        leadName: leadData.name || null,
+        leadPhone: leadData.phone || null,
+        leadEmail: leadData.email || null,
+        leadType: leadData.type || null,
+        roomTypes: leadData.roomTypes || [],
+        projectType: leadData.projectType || null,
+        timeline: leadData.timeline || null,
+        budget: leadData.budget || null,
+        hasWallpaper: leadData.hasWallpaper || null,
+        tags: leadData.tags || [],
         messages: messages
           .filter(m => m.type !== 'contact-form')
           .map(m => ({ sender: m.sender, text: m.text })),
