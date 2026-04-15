@@ -49,7 +49,7 @@ export function useLeadManager({ messages, currentStep, onLeadUpdate }: UseLeadM
       tags,
       status,
       ...userLeadData,
-    } as Lead);
+    } satisfies Lead as Lead);
   }, [userLeadData, currentStep, activeLeadId]);
 
   useEffect(() => {

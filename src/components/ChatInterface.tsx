@@ -28,6 +28,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setInputValue,
     handleSendMessage,
     handleOptionSelect,
+    handleMultiSelect,
     handleContactSubmit,
     triggerFlowStep,
   } = useChat({ onLeadUpdate, requireContact });
@@ -35,9 +36,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div
       className={cn(
-        'bg-white flex flex-col overflow-hidden',
+        'bg-primary flex flex-col overflow-hidden',
         isFullScreen
-          ? 'w-full h-screen max-w-4xl mx-auto shadow-2xl rounded-none md:rounded-3xl md:h-[90vh] md:my-[5vh]'
+          ? 'w-full h-screen max-w-4xl mx-auto shadow-2xl rounded-none md:rounded-3xl md:h-[90vh] md:my-[5vh] border border-border'
           : 'w-[400px] h-[600px] rounded-3xl shadow-2xl border border-border',
       )}
     >
@@ -48,6 +49,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         contactCollected={contactCollected}
         chatEndRef={chatEndRef}
         onOptionSelect={handleOptionSelect}
+        onMultiSelect={handleMultiSelect}
         onFlowStep={triggerFlowStep}
         onContactSubmit={handleContactSubmit}
       />

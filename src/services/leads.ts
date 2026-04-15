@@ -26,7 +26,7 @@ export function rowToLead(row: LeadRow): Lead {
     email: row.email ?? undefined,
     type: (row.user_type as Lead['type']) || 'Homeowner',
     serviceType: (row.service_type as Lead['serviceType']) ?? undefined,
-    projectType: (row.project_type as Lead['projectType']) ?? undefined,
+    projectType: row.project_type ?? undefined,
     timeline: (row.timeline as Lead['timeline']) ?? undefined,
     budget: (row.budget as Lead['budget']) ?? undefined,
     photoUrl: row.photo_url ?? undefined,
@@ -48,7 +48,7 @@ export async function createLead(data: Partial<Lead>): Promise<Lead> {
       email: data.email ?? null,
       user_type: data.type || 'Homeowner',
       service_type: data.serviceType ?? null,
-      project_type: data.projectType ?? null,
+      project_type: data.projectType ?? (data.roomTypes ? data.roomTypes.join(', ') : null),
       timeline: data.timeline ?? null,
       budget: data.budget ?? null,
       tags: data.tags || [],
@@ -69,6 +69,7 @@ export async function updateLead(id: string, data: Partial<Lead>): Promise<void>
   if (data.type !== undefined) payload.user_type = data.type;
   if (data.serviceType !== undefined) payload.service_type = data.serviceType;
   if (data.projectType !== undefined) payload.project_type = data.projectType;
+  if (data.roomTypes !== undefined) payload.project_type = data.roomTypes.join(', ');
   if (data.timeline !== undefined) payload.timeline = data.timeline;
   if (data.budget !== undefined) payload.budget = data.budget;
   if (data.tags !== undefined) payload.tags = data.tags;

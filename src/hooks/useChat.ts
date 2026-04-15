@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Message, Lead, FlowAction } from '../types';
 import {
   GREETING_MESSAGE, INITIAL_MESSAGE,
-  createWelcomeMessage, processStep,
+  processStep,
 } from '../lib/flow';
 import { generateConciergeResponse } from '../services/openai';
 import { useLeadManager } from './useLeadManager';
@@ -15,10 +15,10 @@ interface UseChatProps {
 
 export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [contactCollected, setContactCollected] = useState(!requireContact);
+  const [contactCollected, setContactCollected] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const { userLeadData, updateLeadData } = useLeadManager({
@@ -33,12 +33,8 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
 
   useEffect(() => {
     if (messages.length === 0) {
-      if (requireContact) {
-        setMessages([GREETING_MESSAGE]);
-      } else {
-        setMessages([INITIAL_MESSAGE]);
-        setCurrentStep(1);
-      }
+      setMessages([GREETING_MESSAGE]);
+      setCurrentStep(1);
     }
   }, []);
 
@@ -55,7 +51,9 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
       } else {
         const delay = cumulativeDelay;
         const a = action;
+        setIsTyping(true);
         setTimeout(() => {
+          setIsTyping(false);
           if (a.messages.length) setMessages(prev => [...prev, ...a.messages]);
           if (a.step !== undefined) setCurrentStep(a.step);
           if (a.leadUpdate) updateLeadData(a.leadUpdate);
@@ -78,8 +76,7 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
 
     setTimeout(() => {
       setIsTyping(false);
-      setMessages(prev => [...prev, createWelcomeMessage(name)]);
-      setCurrentStep(1);
+      executeFlowActions(processStep(currentStep, 'contact_collected', userLeadData));
     }, 800);
   };
 
@@ -92,18 +89,6 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
     const text = inputValue;
     setInputValue('');
     setIsTyping(true);
-
-    if (currentStep === 0) {
-      setTimeout(() => {
-        setIsTyping(false);
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          text: "I'd love to assist you. Please share your name and preferred contact method using the form above - it helps me provide a truly personalized experience.",
-          sender: 'bot',
-        }]);
-      }, 600);
-      return;
-    }
 
     const currentOptions = messages[messages.length - 1]?.options;
     if (currentOptions) {
@@ -150,6 +135,18 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
     }, 800);
   };
 
+  const handleMultiSelect = (selected: string[]) => {
+    const joined = selected.join(', ');
+    const userMsg: Message = { id: Date.now().toString(), text: joined, sender: 'user' };
+    setMessages(prev => [...prev, userMsg]);
+    setIsTyping(true);
+
+    setTimeout(() => {
+      setIsTyping(false);
+      executeFlowActions(processStep(currentStep, joined, userLeadData));
+    }, 800);
+  };
+
   const triggerFlowStep = (input: string) => {
     executeFlowActions(processStep(currentStep, input, userLeadData));
   };
@@ -169,13 +166,13 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
   }, [userLeadData, messages]);
 
   useEffect(() => {
-    if (messages.length > 1 && contactCollected) {
+    if (messages.length > 1) {
       resetIdleTimer();
     }
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, [messages, contactCollected, resetIdleTimer]);
+  }, [messages, resetIdleTimer]);
 
   return {
     messages,
@@ -186,6 +183,7 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
     setInputValue,
     handleSendMessage,
     handleOptionSelect,
+    handleMultiSelect,
     handleContactSubmit,
     triggerFlowStep,
   };

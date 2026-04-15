@@ -62,7 +62,7 @@ export default function App() {
 function PublicChatPage() {
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-0 md:p-4">
-      <ChatInterface isFullScreen requireContact />
+      <ChatInterface isFullScreen />
     </div>
   );
 }
