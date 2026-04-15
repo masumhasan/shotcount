@@ -9,21 +9,21 @@ import { generateMessageId } from './utils';
 
 export const GREETING_MESSAGE: Message = {
   id: '1',
-  text: "It's a pleasure to meet you!\n\nWelcome to ShotCount, where walls become statements.\n\nAre you looking to elevate your space with bespoke wallpaper installation?",
+  text: "It's a pleasure to meet you!\n\nWelcome to Shotcount, where walls become statements.\n\nAre you looking to elevate your space with bespoke wallpaper installation?",
   sender: 'bot',
   options: ['Yes, for a home', 'Yes, for a project/client', 'Just exploring ideas'],
 };
 
 export const INITIAL_MESSAGE: Message = {
   id: '1',
-  text: "It's a pleasure to meet you!\n\nWelcome to ShotCount, where walls become statements.\n\nAre you looking to elevate your space with bespoke wallpaper installation?",
+  text: "It's a pleasure to meet you!\n\nWelcome to Shotcount, where walls become statements.\n\nAre you looking to elevate your space with bespoke wallpaper installation?",
   sender: 'bot',
   options: ['Yes, for a home', 'Yes, for a project/client', 'Just exploring ideas'],
 };
 
 export function createWelcomeMessage(_name: string): Message {
   return msg(
-    "It's a pleasure to meet you!\n\nWelcome to ShotCount, where walls become statements.\n\nAre you looking to elevate your space with bespoke wallpaper installation?",
+    "It's a pleasure to meet you!\n\nWelcome to Shotcount, where walls become statements.\n\nAre you looking to elevate your space with bespoke wallpaper installation?",
     { options: ['Yes, for a home', 'Yes, for a project/client', 'Just exploring ideas'] },
   );
 }
@@ -40,11 +40,10 @@ export function createWelcomeMessage(_name: string): Message {
  * 5  - Timeline
  * 6  - Premium positioning + social proof (shown before budget if timeline is longer)
  * 7  - Budget
- * 8  - Urgency + scarcity
+ * 8  - Wallpaper qualification (do you have wallpaper selected?)
  * 9  - Lead capture (contact form)
- * 10 - Wallpaper qualification
- * 11 - Close / booking
- * 12 - Confirmation
+ * 10 - Close / booking
+ * 11 - Confirmation
  */
 export function getNextStepDescription(step: number): string {
   switch (step) {
@@ -56,11 +55,10 @@ export function getNextStepDescription(step: number): string {
     case 5: return 'Asking about timeline.';
     case 6: return 'Premium positioning and social proof.';
     case 7: return 'Asking about budget / investment level.';
-    case 8: return 'Urgency and scarcity messaging.';
+    case 8: return 'Wallpaper qualification: do they have wallpaper selected?';
     case 9: return 'Lead capture: collecting name, phone, email.';
-    case 10: return 'Wallpaper qualification: do they have wallpaper selected?';
-    case 11: return 'Close: booking consultation.';
-    case 12: return 'Confirmation message sent.';
+    case 10: return 'Close: booking consultation.';
+    case 11: return 'Confirmation message sent.';
     default: return 'Conversation complete.';
   }
 }
@@ -86,10 +84,8 @@ export function processStep(
     case 5: return processTimeline(input, leadData);
     case 6: return processPremiumPositioning(leadData);
     case 7: return processBudget(input, leadData);
-    case 8: return processUrgency(leadData);
+    case 8: return processWallpaperQualification(input, leadData);
     case 9: return processLeadCapture(leadData);
-    case 10: return processWallpaperQualification(input, leadData);
-    case 11: return processClose(leadData);
     default: return [];
   }
 }
@@ -110,7 +106,7 @@ function processWelcome(input: string, _ld: Partial<Lead>): FlowAction[] {
   return [{
     messages: [msg(
       "Perfect. We collaborate closely with project owners to make your vision a reality.\n\nWonderful. To provide a refined estimate, may I ask. Are you?",
-      { options: ['A Homeowner', 'An Interior Designer', 'Architect', 'A Real Estate Developer'], multiSelect: true },
+      { options: ['A Homeowner', 'An Interior Designer', 'Architect', 'A Real Estate Developer'] },
     )],
     step: 3,
   }];
@@ -249,33 +245,13 @@ function processBudget(input: string, leadData: Partial<Lead>): FlowAction[] {
     },
     {
       messages: [msg(
-        "To prepare your personalized consultation, may I have a few details?",
-        { type: 'contact-form' },
+        "Do you already have wallpaper selected?",
+        { options: ['Yes', 'Need guidance'] },
       )],
-      step: 9,
+      step: 8,
       delayMs: 2400,
     },
   ];
-}
-
-function processUrgency(ld: Partial<Lead>): FlowAction[] {
-  return [{
-    messages: [msg(
-      "To prepare your personalized consultation, may I have a few details?",
-      { type: 'contact-form' },
-    )],
-    step: 9,
-  }];
-}
-
-function processLeadCapture(ld: Partial<Lead>): FlowAction[] {
-  return [{
-    messages: [msg(
-      "Do you already have wallpaper selected?",
-      { options: ['Yes', 'Need guidance'] },
-    )],
-    step: 10,
-  }];
 }
 
 function processWallpaperQualification(input: string, ld: Partial<Lead>): FlowAction[] {
@@ -289,10 +265,10 @@ function processWallpaperQualification(input: string, ld: Partial<Lead>): FlowAc
       },
       {
         messages: [msg(
-          "Based on your project, the next step is a private phone consultation with our specialist to get you started.",
-          { type: 'scheduling' },
+          "To prepare your personalized consultation, may I have a few details?",
+          { type: 'contact-form' },
         )],
-        step: 11,
+        step: 9,
         delayMs: 1200,
       },
     ];
@@ -300,19 +276,28 @@ function processWallpaperQualification(input: string, ld: Partial<Lead>): FlowAc
 
   return [{
     messages: [msg(
-      "Based on your project, the next step is a private phone consultation with our specialist to get you started.",
-      { type: 'scheduling' },
+      "To prepare your personalized consultation, may I have a few details?",
+      { type: 'contact-form' },
     )],
-    step: 11,
+    step: 9,
     leadUpdate: { hasWallpaper: 'Yes' },
   }];
 }
 
-function processClose(ld: Partial<Lead>): FlowAction[] {
-  return [{
-    messages: [msg(
-      "You're all set. A specialist will reach out shortly to finalize your consultation.\n\nWe look forward to transforming your space into something extraordinary.",
-    )],
-    step: 12,
-  }];
+function processLeadCapture(ld: Partial<Lead>): FlowAction[] {
+  return [
+    {
+      messages: [msg(
+        "Based on your project, the next step is a private phone consultation with our specialist to get you started.",
+      )],
+      step: 10,
+    },
+    {
+      messages: [msg(
+        "You're all set. A specialist will reach out shortly to finalize your consultation.\n\nWe look forward to transforming your space into something extraordinary.",
+      )],
+      step: 11,
+      delayMs: 1500,
+    },
+  ];
 }

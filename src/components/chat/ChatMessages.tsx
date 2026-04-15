@@ -233,7 +233,7 @@ const MultiSelectButtons: React.FC<{
       {selected.size > 0 && (
         <button
           onClick={() => onConfirm(Array.from(selected))}
-          className="mt-3 px-6 py-2 bg-accent text-primary rounded-full text-xs font-bold hover:bg-accent-hover transition-all"
+          className="mt-3 w-full py-3 bg-accent text-black rounded-xl text-sm font-bold hover:bg-accent-hover transition-all"
         >
           Continue with {selected.size} selected
         </button>
