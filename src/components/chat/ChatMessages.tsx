@@ -232,10 +232,19 @@ const MultiSelectButtons: React.FC<{
       </div>
       {selected.size > 0 && (
         <button
+          type="button"
           onClick={() => onConfirm(Array.from(selected))}
-          className="mt-3 w-full py-3 bg-accent text-black rounded-xl text-sm font-bold hover:bg-accent-hover transition-all"
+          className={cn(
+            'mt-4 w-full rounded-xl py-3.5 px-4 text-sm font-semibold tracking-wide text-white',
+            'bg-primary border-2 border-accent',
+            'shadow-[0_10px_40px_-12px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.06)]',
+            'transition-all duration-200',
+            'hover:bg-primary-hover hover:border-accent-hover hover:shadow-[0_12px_40px_-10px_rgba(198,168,107,0.18)]',
+            'active:scale-[0.99] active:bg-primary',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-primary',
+          )}
         >
-          Continue with {selected.size} selected
+          {selected.size} {selected.size === 1 ? 'Space' : 'Spaces'} Selected, Continue
         </button>
       )}
     </div>

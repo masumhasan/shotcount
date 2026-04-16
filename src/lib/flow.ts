@@ -125,7 +125,7 @@ function processExploring(_input: string, _ld: Partial<Lead>): FlowAction[] {
       { type: 'contact-form' },
     )],
     step: 9,
-    delayMs: 1200,
+    delayMs: 2200,
   }];
 }
 
@@ -203,7 +203,7 @@ function processTimeline(input: string, ld: Partial<Lead>): FlowAction[] {
         { options: ['$0-$300', '$500-$1000', '$1000-$2000', '$2000+', 'Other'] },
       )],
       step: 7,
-      delayMs: 1500,
+      delayMs: 2500,
     },
   ];
 }
@@ -241,7 +241,7 @@ function processBudget(input: string, leadData: Partial<Lead>): FlowAction[] {
       messages: [msg(
         "We're currently booking a limited number of projects this month to maintain our quality standards.\n\nLet's secure your spot early.",
       )],
-      delayMs: 1200,
+      delayMs: 2200,
     },
     {
       messages: [msg(
@@ -249,7 +249,7 @@ function processBudget(input: string, leadData: Partial<Lead>): FlowAction[] {
         { options: ['Yes', 'Need guidance'] },
       )],
       step: 8,
-      delayMs: 2400,
+      delayMs: 3400,
     },
   ];
 }
@@ -269,7 +269,7 @@ function processWallpaperQualification(input: string, ld: Partial<Lead>): FlowAc
           { type: 'contact-form' },
         )],
         step: 9,
-        delayMs: 1200,
+        delayMs: 2200,
       },
     ];
   }
@@ -297,7 +297,7 @@ function processLeadCapture(ld: Partial<Lead>): FlowAction[] {
         "You're all set. A specialist will reach out shortly to finalize your consultation.\n\nWe look forward to transforming your space into something extraordinary.",
       )],
       step: 11,
-      delayMs: 1500,
+      delayMs: 2500,
     },
   ];
 }

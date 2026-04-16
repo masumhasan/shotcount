@@ -8,6 +8,16 @@ import { generateConciergeResponse } from '../services/openai';
 import { useLeadManager } from './useLeadManager';
 import { sendChatSummaryEmail } from '../services/email';
 
+/** Pause after user input while typing indicator shows, before bot messages appear. */
+const TYPING_BEFORE_BOT_MS = 1800;
+
+/** Extra pause after OpenAI returns so replies do not appear instantaneously. */
+const OPENAI_REPLY_EXTRA_MS = 1000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 interface UseChatProps {
   onLeadUpdate?: (lead: Lead) => void;
   requireContact?: boolean;
@@ -85,7 +95,7 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
     setTimeout(() => {
       setIsTyping(false);
       executeFlowActions(processStep(currentStep, 'contact_collected', userLeadData));
-    }, 800);
+    }, TYPING_BEFORE_BOT_MS);
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -108,13 +118,14 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
         setTimeout(() => {
           setIsTyping(false);
           executeFlowActions(processStep(currentStep, match, userLeadData));
-        }, 800);
+        }, TYPING_BEFORE_BOT_MS);
         return;
       }
     }
 
     try {
       const response = await generateConciergeResponse(text, currentStep, userLeadData);
+      await delay(OPENAI_REPLY_EXTRA_MS);
       setIsTyping(false);
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
@@ -123,6 +134,7 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
       }]);
     } catch (error) {
       console.error('OpenAI Error:', error);
+      await delay(OPENAI_REPLY_EXTRA_MS);
       setIsTyping(false);
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
@@ -140,7 +152,7 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
     setTimeout(() => {
       setIsTyping(false);
       executeFlowActions(processStep(currentStep, option, userLeadData));
-    }, 800);
+    }, TYPING_BEFORE_BOT_MS);
   };
 
   const handleMultiSelect = (selected: string[]) => {
@@ -152,7 +164,7 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
     setTimeout(() => {
       setIsTyping(false);
       executeFlowActions(processStep(currentStep, joined, userLeadData));
-    }, 800);
+    }, TYPING_BEFORE_BOT_MS);
   };
 
   const triggerFlowStep = (input: string) => {
