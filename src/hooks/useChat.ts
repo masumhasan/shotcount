@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Message, Lead, FlowAction } from '../types';
 import {
   GREETING_MESSAGE, INITIAL_MESSAGE,
@@ -70,9 +70,17 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
       sender: 'user',
     };
     setMessages(prev => [...prev, userMsg]);
-    updateLeadData({ name, phone, ...(email ? { email } : {}) });
+    const contactUpdate = { name, phone, ...(email ? { email } : {}) };
+    updateLeadData(contactUpdate);
     setContactCollected(true);
     setIsTyping(true);
+
+    const fullLeadData = { ...latestLeadRef.current, ...contactUpdate };
+    const allMessages = [...latestMessagesRef.current, userMsg];
+    if (!summarySentRef.current) {
+      summarySentRef.current = true;
+      sendChatSummaryEmail(fullLeadData, allMessages);
+    }
 
     setTimeout(() => {
       setIsTyping(false);
@@ -151,32 +159,11 @@ export function useChat({ onLeadUpdate, requireContact }: UseChatProps = {}) {
     executeFlowActions(processStep(currentStep, input, userLeadData));
   };
 
-  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const summarySentRef = useRef(false);
   const latestLeadRef = useRef(userLeadData);
   const latestMessagesRef = useRef(messages);
   latestLeadRef.current = userLeadData;
   latestMessagesRef.current = messages;
-
-  const resetIdleTimer = useCallback(() => {
-    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    if (summarySentRef.current) return;
-
-    idleTimerRef.current = setTimeout(() => {
-      if (summarySentRef.current || latestMessagesRef.current.length <= 1) return;
-      summarySentRef.current = true;
-      sendChatSummaryEmail(latestLeadRef.current, latestMessagesRef.current);
-    }, 5 * 60 * 1000);
-  }, []);
-
-  useEffect(() => {
-    if (messages.length > 1) {
-      resetIdleTimer();
-    }
-    return () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    };
-  }, [messages, resetIdleTimer]);
 
   return {
     messages,
