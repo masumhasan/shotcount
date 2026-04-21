@@ -38,7 +38,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       className={cn(
         'bg-primary flex flex-col overflow-hidden',
         isFullScreen
-          ? 'w-full h-screen max-w-4xl mx-auto shadow-2xl rounded-none md:rounded-3xl md:h-[90vh] md:my-[5vh] border border-border'
+          ? 'w-full h-dvh max-w-4xl mx-auto shadow-2xl rounded-none md:rounded-3xl md:h-[90dvh] md:my-[5dvh] border border-border'
           : 'w-[400px] h-[600px] rounded-3xl shadow-2xl border border-border',
       )}
     >

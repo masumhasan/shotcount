@@ -26,7 +26,7 @@ export default function App() {
 
 function PublicChatPage() {
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-0 md:p-4">
+    <div className="min-h-dvh bg-surface flex items-start md:items-center justify-center p-0 md:p-4">
       <ChatInterface isFullScreen />
     </div>
   );
