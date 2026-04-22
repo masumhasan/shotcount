@@ -1,5 +1,5 @@
 import React from 'react';
-import { Inbox, MessageSquare, LogOut } from 'lucide-react';
+import { Inbox, LogOut } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 const NavItem = ({
@@ -27,12 +27,11 @@ const NavItem = ({
 );
 
 export interface InboxSidebarProps {
-  onNavigatePublicChat: () => void;
   onSignOut: () => void;
   onNavigateComplete?: () => void;
 }
 
-export function InboxSidebar({ onNavigatePublicChat, onSignOut, onNavigateComplete }: InboxSidebarProps) {
+export function InboxSidebar({ onSignOut, onNavigateComplete }: InboxSidebarProps) {
   const wrap = (fn: () => void) => () => {
     fn();
     onNavigateComplete?.();
@@ -47,7 +46,6 @@ export function InboxSidebar({ onNavigatePublicChat, onSignOut, onNavigateComple
 
       <nav className="flex-1 space-y-2 min-h-0 overflow-y-auto">
         <NavItem icon={Inbox} label="Inbox" active onClick={() => {}} />
-        <NavItem icon={MessageSquare} label="Public Chat" onClick={wrap(onNavigatePublicChat)} />
       </nav>
 
       <div className="pt-6 mt-auto border-t border-slate-200 space-y-2 shrink-0">
