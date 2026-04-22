@@ -1,6 +1,5 @@
 import React from 'react';
 import { ArrowLeft, X } from 'lucide-react';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { cn } from '../../lib/utils';
 
 interface ChatHeaderProps {
@@ -15,13 +14,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ onClose }) => (
     style={{ WebkitBackdropFilter: 'blur(6px)', backdropFilter: 'blur(6px)' }}
   >
     <div className="flex min-w-0 flex-1 items-center gap-3">
-      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10">
-        <DotLottieReact
-          src="/bot.lottie"
-          autoplay
-          loop
-          className="absolute -left-3 -top-3 h-16 w-16"
-        />
+      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
+        <img src="/Shotcount-Logo.png" alt="Shotcount logo" className="h-full w-full object-contain" />
       </div>
       <div className="min-w-0">
         <h3 className="truncate font-bold leading-tight text-text-main">Shotcount Assistant</h3>
