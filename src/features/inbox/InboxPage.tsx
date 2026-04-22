@@ -25,7 +25,6 @@ export function InboxPage() {
     handleAdminReply,
     handleDeleteLead,
     handleSignOut,
-    navigateToPublicChat,
   } = useInbox();
 
   return (
@@ -53,7 +52,6 @@ export function InboxPage() {
         )}
       >
         <InboxSidebar
-          onNavigatePublicChat={navigateToPublicChat}
           onSignOut={handleSignOut}
           onNavigateComplete={closeSidebar}
         />
