@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test:email": "node scripts/test-email.mjs"
+    "test:email": "node scripts/test-email.mjs",
+    "test:openai": "node scripts/test-openai.mjs"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.18.10",
